@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BATTLE ZONE: RISE OF ISLANDS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #gameContainer {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Mobile Controls */
+        .mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .joystick-container {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            position: relative;
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        .joystick-thumb {
+            width: 50px;
+            height: 50px;
+            background: rgba(100, 200, 255, 0.6);
+            border: 2px solid rgba(100, 200, 255, 0.8);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: background 0.1s;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .action-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 100, 100, 0.3);
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: none;
+            user-select: none;
+            transition: background 0.1s;
+        }
+
+        .action-btn:active {
+            background: rgba(255, 100, 100, 0.6);
+            transform: scale(0.95);
+        }
+
+        .jump-btn {
+            background: rgba(100, 255, 100, 0.3) !important;
+            border-color: rgba(100, 255, 100, 0.5) !important;
+        }
+
+        .shoot-btn {
+            background: rgba(255, 150, 50, 0.3) !important;
+            border-color: rgba(255, 150, 50, 0.5) !important;
+        }
+
+        .shoot-btn:active {
+            background: rgba(255, 150, 50, 0.6) !important;
+        }
+
+        /* HUD */
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 14px;
+            z-index: 200;
+            pointer-events: none;
+        }
+
+        .hud-item {
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 12px;
+            border-radius: 4px;
+            border-left: 3px solid #64c8ff;
+        }
+
+        .health-bar {
+            width: 150px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #64c8ff;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00);
+            width: 100%;
+            transition: width 0.3s;
+        }
+
+        .ammo-bar {
+            width: 150px;
+            height: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #ff6432;
+            border-radius: 2px;
+            margin-top: 3px;
+            overflow: hidden;
+        }
+
+        .ammo-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6432, #ffaa32);
+            width: 100%;
+            transition: width 0.2s;
+        }
+
+        .zone-info {
+            margin-top: 15px;
+            border-left-color: #ff6432;
+        }
+
+        .crosshair {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 150;
+        }
+
+        .crosshair::before,
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(100, 200, 255, 0.6);
+        }
+
+        .crosshair::before {
+            width: 2px;
+            height: 12px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .crosshair::after {
+            width: 12px;
+            height: 2px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 300;
+            color: white;
+        }
+
+        .game-over.show {
+            display: flex;
+        }
+
+        .game-over-title {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .game-over-text {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        .restart-btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #64c8ff;
+            color: black;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            pointer-events: auto;
+        }
+
+        .restart-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Instructions */
+        .instructions {
+            position: absolute;
+            bottom: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #64c8ff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            text-align: center;
+            max-width: 300px;
+            pointer-events: none;
+            display: none;
+        }
+
+        .instructions.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .hud {
+                font-size: 12px;
+            }
+
+            .action-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 10px;
+            }
+
+            .joystick-container {
+                width: 100px;
+                height: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- HUD -->
+        <div class="hud">
+            <div class="hud-item">
+                <div>❤️ HEALTH</div>
+                <div class="health-bar">
+                    <div class="health-fill" id="healthFill"></div>
+                </div>
+            </div>
+            <div class="hud-item">
+                <div>🔫 AMMO: <span id="ammoCount">30</span></div>
+                <div class="ammo-bar">
+                    <div class="ammo-fill" id="ammoFill"></div>
+                </div>
+            </div>
+            <div class="hud-item zone-info">
+                <div>🎯 ZONE: <span id="zoneDistance">--</span>m</div>
+                <div id="zoneStatus">Shrinking...</div>
+            </div>
+            <div class="hud-item">
+                <div>👾 ENEMIES: <span id="enemyCount">1</span></div>
+            </div>
+        </div>
+
+        <!-- Crosshair -->
+        <div class="crosshair"></div>
+
+        <!-- Mobile Controls -->
+        <div class="mobile-controls">
+            <div class="joystick-container" id="joystick">
+                <div class="joystick-thumb" id="joystickThumb"></div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-btn jump-btn" id="jumpBtn">JUMP</button>
+                <button class="action-btn shoot-btn" id="shootBtn">SHOOT</button>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions show" id="instructions">
+            <div>Move: Left Joystick | Jump: Green Button | Shoot: Orange Button</div>
+            <div style="margin-top: 8px;">Eliminate enemy bots and stay in the shrinking zone!</div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div class="game-over" id="gameOverScreen">
+            <div class="game-over-title" id="gameOverTitle">ELIMINATED</div>
+            <div class="game-over-text" id="gameOverText">Better luck next time!</div>
+            <button class="restart-btn" id="restartBtn">RESTART GAME</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/enemy.js"></script>
+    <script src="js/weapon.js"></script>
+    <script src="js/loot.js"></script>
+    <script src="js/zone.js"></script>
+    <script src="js/mobile-controls.js"></script>
+</body>
+</html>
